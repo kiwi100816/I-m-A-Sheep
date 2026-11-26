@@ -329,7 +329,6 @@ window.FIREBASE_CONFIG = {
             <button class="btn vbtn" type="button" data-c="2">第三章</button>
             <button class="btn vbtn" type="button" data-c="3">每日挑戰</button>
           </div>
-          <button class="btn ghost" id="btnUnlock" type="button">解鎖全部（測試用）</button>
           <button class="btn ghost" id="btnAdvBack" type="button">返回</button>
         </div>
       </div>
@@ -338,7 +337,6 @@ window.FIREBASE_CONFIG = {
         <div class="card">
           <div class="big" id="lvTitle">第一章</div>
           <div class="vlist" id="lvList"></div>
-          <button class="btn ghost" id="btnDailyRefresh" type="button" hidden>刷新關卡（測試用）</button>
           <button class="btn ghost" id="btnLvBack" type="button">返回選章節</button>
         </div>
       </div>
@@ -971,17 +969,17 @@ window.FIREBASE_CONFIG = {
   var net = { r: null, code: '', host: false, me: null, joining: false, busy: false, lastRd: 0, rd: 0, ro: [], unsub: null, joinTimer: 0, lastHostSeen: 0, jt: 0 };
   var boardRows = [];
   var boss = null, bullets = [], pshots = [], advBoss = [false, false, false];
-  var adv = null, advLv = 1, clearT = 0, finP = null, advTotal = 1, clearTime = 0, advClr = [], advAll = false;
+  var adv = null, advLv = 1, clearT = 0, finP = null, advTotal = 1, clearTime = 0, advClr = [];
   var tags = {}, tagUse = {}, specLab = null, nick = '', myName = '', advCh = 0, goBusy = false;
   try { nick = localStorage.getItem(NICK_KEY) || ''; } catch (e) {}
   (function () {
     var a = [];
-    try { a = JSON.parse(localStorage.getItem(ADV_KEY) || '[]') || []; advAll = localStorage.getItem(ADV_ALL_KEY) === '1'; } catch (e) {}
+    try { a = JSON.parse(localStorage.getItem(ADV_KEY) || '[]') || []; } catch (e) {}
     for (var i = 0; i < 27; i++) advClr[i] = !!a[i];
     try { var bb = JSON.parse(localStorage.getItem(ADV_BOSS_KEY) || '[]') || []; for (i = 0; i < 3; i++) advBoss[i] = !!bb[i]; } catch (e) {}
   })();
   function saveAdv() {
-    try { localStorage.setItem(ADV_KEY, JSON.stringify(advClr.map(function (v) { return v ? 1 : 0; }))); localStorage.setItem(ADV_ALL_KEY, advAll ? '1' : '0'); localStorage.setItem(ADV_BOSS_KEY, JSON.stringify(advBoss.map(function (v) { return v ? 1 : 0; }))); } catch (e) {}
+    try { localStorage.setItem(ADV_KEY, JSON.stringify(advClr.map(function (v) { return v ? 1 : 0; }))); localStorage.setItem(ADV_BOSS_KEY, JSON.stringify(advBoss.map(function (v) { return v ? 1 : 0; }))); } catch (e) {}
   }
   var toastTimer = 0;
 
@@ -1004,7 +1002,7 @@ window.FIREBASE_CONFIG = {
     var a = null;
     try { a = JSON.parse(localStorage.getItem(DAILY_KEY) || 'null'); } catch (e) {}
     daily = { d: today, salt: 0, clr: [false, false, false, false, false] };
-    if (a && a.d === today) { daily.salt = a.salt | 0; for (var i = 0; i < 5; i++) daily.clr[i] = !!(a.clr && a.clr[i]); }
+    if (a && a.d === today) { for (var i = 0; i < 5; i++) daily.clr[i] = !!(a.clr && a.clr[i]); }
     else saveDaily();
   }
   var SUN_NAME = '終·決戰週日魔王';
@@ -1024,7 +1022,7 @@ window.FIREBASE_CONFIG = {
     p.daily = i;
     return p;
   }
-  function dailyTitle() { return '今日挑戰：' + daily.d + (daily.salt ? '（測試刷新 ×' + daily.salt + '）' : ''); }
+  function dailyTitle() { return '今日挑戰：' + daily.d + ''; }
 
   function mkPlat(x, y, w) {
     return { x: x, y: y, w: w || PW, mv: false, dx: 0, spikes: null, item: null, ice: false, spring: false, pulse: 0,
@@ -1849,7 +1847,6 @@ window.FIREBASE_CONFIG = {
   var NUM = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
   function setAdvHud(on, isBoss) { hudBest.hidden = on; hudLevel.hidden = !on; hudScore.hidden = !!(on && isBoss); $('hu').textContent = on ? ' %' : ' 分'; }
   function lvUnlocked(c, l) {
-    if (advAll) return true;
     if (c === 3) { dailyEnsure(); return l === 1 || !!daily.clr[l - 2]; }   // daily challenge: level 1 is always open
     if (l === 1) return c === 0 || advBoss[c - 1];
     if (l === 10) return advClr[c * 9 + 8] || advBoss[c];
@@ -1863,12 +1860,10 @@ window.FIREBASE_CONFIG = {
       chs[c].disabled = !ok;
       chs[c].textContent = '第' + NUM[c] + '章' + (ok && all ? ' ✓' : '');
     }
-    $('btnUnlock').textContent = advAll ? '已解鎖全部（再按取消）' : '解鎖全部（測試用）';
   }
   function refreshLevels() {
     var bs = $('lvList').children, isD = advCh === 3;
     if (isD) { dailyEnsure(); $('lvTitle').textContent = dailyTitle(); }
-    $('btnDailyRefresh').hidden = !isD;
     for (var n = 1; n <= bs.length; n++) {
       bs[n - 1].hidden = isD && n > 5;
       if (isD) {
@@ -2126,8 +2121,14 @@ window.FIREBASE_CONFIG = {
     }
   } catch (e) {}
   shop.owned = shop.owned.filter(function (id) { return SKIN_DEFS.some(function (d) { return d[0] === id; }); });
-  SKIN_DEFS.forEach(function (d) { if (shop.owned.indexOf(d[0]) < 0) shop.owned.push(d[0]); });
-  if (shop.owned.indexOf(shop.cur) < 0) shop.cur = 'sheep';   // TEST: every skin unlocked
+  try {   // one-time clean-up of the test build that had every skin unlocked
+    if (!localStorage.getItem('fat-goat-test-clean-v1')) {
+      localStorage.setItem('fat-goat-test-clean-v1', '1');
+      shop.owned = ['sheep']; shop.cur = 'sheep';
+      delete ach.done.zoo; delete ach.done.superzoo; saveAch(); saveShop();
+    }
+  } catch (e) {}
+  if (shop.owned.indexOf(shop.cur) < 0) shop.cur = 'sheep';
   var COIN_ROWS = ["....kkkk....", "..kkyyyykk..", ".kkywyyyykk.", ".kywwooyyyk.", "kyywyooyyyyk", "kyyyyooyyyyk", "kyyyyooyyyyk", "kyyyyooyoyyk", ".kyyyooyoyk.", ".kkyyyyoykk.", "..kkyyyykk..", "....kkkk...."];
   var coinURL = (function () {
     var cc = document.createElement('canvas'); cc.width = 12; cc.height = 12;
@@ -2197,7 +2198,7 @@ window.FIREBASE_CONFIG = {
     shop.advPaid[key] = 1; addCoins(adv.boss ? 500 : 50);
   }
   function payEndless(sc) { addCoins(Math.floor(sc / 100)); }   // 100 points = 1 coin
-  function skinVisible(id) { return true; }   // TEST: super sheep always listed
+  function skinVisible(id) { return id !== 'supersheep' || !!advBoss[2]; }
   function achShop() {   // checked when the shop opens and after every purchase
     if (shop.owned.length > 1) unlockAch('zoo');
     if (SKIN_DEFS.every(function (d) { return shop.owned.indexOf(d[0]) >= 0; })) unlockAch('superzoo');
@@ -2963,11 +2964,6 @@ window.FIREBASE_CONFIG = {
   $('btnLvBack').addEventListener('click', closeLv);
   $('btnNext').addEventListener('click', nextLevel);
   $('btnClMenu').addEventListener('click', function () { if (state === 'clear') toLevelSelect(); });
-  $('btnDailyRefresh').addEventListener('click', function () {   // test: roll a fresh set of 5 levels and wipe the clear record
-    if (state !== 'lv' || advCh !== 3) return;
-    dailyEnsure(); daily.salt++; daily.clr = [false, false, false, false, false]; saveDaily(); refreshLevels();
-  });
-  $('btnUnlock').addEventListener('click', function () { advAll = !advAll; saveAdv(); refreshChapters(); });
   $('btnNickGo').addEventListener('click', nickGo);
   $('btnNickBack').addEventListener('click', closeNick);
   nickIn.addEventListener('input', function () { try { localStorage.setItem(NICK_KEY, cleanNick(nickIn.value)); } catch (e) {} });
